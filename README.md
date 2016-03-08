@@ -1,15 +1,21 @@
 ## Build Image
 checkout this project
-```
+```bash
 docker build -t houselabs/gate ./docker-gate/
 ```
 
 ## For development
 Run
-`docker run -i -t --net=host --privileged=true -v /home/core/conf:/conf houselabs/gate bash`
+```bash
+docker run -i -t --net=host --privileged=true -v /home/core/conf:/conf houselabs/gate bash
+```
 And run
-`supervisord`
+```bash
+supervisord
+```
 
 ## For production
 Run
-`docker run -i -t --net=host --privileged=true -v /home/core/conf:/conf houselabs/gate`
+```bash
+docker run -i -t --net=host --privileged=true -v /home/core/conf:/conf houselabs/gate
+```
