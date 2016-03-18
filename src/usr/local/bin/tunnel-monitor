@@ -1,0 +1,54 @@
+#!/bin/bash
+
+source /conf/tunnel-monitor.conf
+
+ROS_SSH="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${ROS_USER}@${ROS_IP} -i ${ROS_KEYFILE}"
+ROUTE_ENABLED_FILE=/tmp/tunnel-monitor-route-enabled
+LOG="/var/log/tunnel-monitor.log"
+CODE=`curl --proxy http://127.0.0.1:16808  -m 10 -s -w "%{http_code}\\n" google.com -o /dev/null`
+
+route_enable() {
+    if [ -f $ROUTE_ENABLED_FILE ]; then return 0; fi
+    touch $ROUTE_ENABLED_FILE
+    $ROS_SSH "/ip dns set allow-remote-requests=yes cache-max-ttl=1w cache-size=2048KiB max-udp-packet-size=512 servers=${GATEIP}"
+    $ROS_SSH "/ip dns cache flush"
+    $ROS_SSH "/ip route enable numbers=0"
+    echo "[`date`]Enabled Route" >> $LOG
+}
+
+route_disable() {
+    if [ ! -f $ROUTE_ENABLED_FILE ]; then return 0; fi
+    $ROS_SSH "/ip dns set allow-remote-requests=yes cache-max-ttl=1w cache-size=2048KiB max-udp-packet-size=512 servers=${ISP_DNS}"
+    $ROS_SSH "/ip dns cache flush"
+    $ROS_SSH "/ip route disable numbers=0"
+    rm $ROUTE_ENABLED_FILE
+    echo "[`date`]disabled Route" >> $LOG
+}
+
+is_services_alive() {
+    for sv in "${SERVICES[@]}"
+    do
+        supervisorctl status $sv | /usr/bin/grep "RUNNING" > /dev/null
+        OUT=$?
+        if [ ! $OUT -eq 0 ]
+        then
+            return 1
+        fi
+    done
+    return 0
+}
+
+is_services_alive 
+SERVICE_ALIVE=$?
+
+
+if [ $CODE == "302" ] && [ $SERVICE_ALIVE == 0 ];
+then
+    #echo "[`date`]Test successed" >> $LOG
+    route_enable
+else
+    echo "[`date`]Test failed" >> $LOG
+    route_disable
+fi;
+
+

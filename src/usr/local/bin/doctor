@@ -1,0 +1,22 @@
+#!/bin/bash
+#Services' status
+echo "[Services]"
+
+supervisorctl status | /usr/bin/grep RUNNING |\
+  GREP_COLOR='1;32' /usr/bin/grep --color=always -E "RUNNING|$" |\
+  GREP_COLOR='1;31' /usr/bin/grep --color=always -E "inactive|$" |\
+  GREP_COLOR='1;31' /usr/bin/grep --color=always -E "failed|$"
+echo -e "\n"
+
+#Test for DNS System and Connection
+echo "[DNS & Connection]"
+CODE=`curl --proxy http://127.0.0.1:16808  -m 10 -s -w "%{http_code}\\n" google.com -o /dev/null`
+
+if [ $CODE != "302" ];
+then
+    echo -e "Connection test is \e[1;31mfailed"
+else
+    echo -e "Connection test is \e[1;32mpassed"
+fi;
+
+echo -e "\e[0m"
